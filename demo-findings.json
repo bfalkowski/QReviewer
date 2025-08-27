@@ -1,0 +1,29 @@
+{
+  "pr": {
+    "url": "https://github.com/org/demo-repo/pull/42",
+    "number": 42,
+    "repo": "org/demo-repo"
+  },
+  "findings": [
+    {
+      "file": "src/auth.py",
+      "hunk_header": "@@ -15,6 +15,8 @@",
+      "severity": "nit",
+      "category": "docs",
+      "message": "Stub implementation - replace with actual Q integration",
+      "confidence": 0.5,
+      "suggested_patch": null,
+      "line_hint": 22
+    },
+    {
+      "file": "src/utils.py",
+      "hunk_header": "@@ -8,10 +8,12 @@",
+      "severity": "nit",
+      "category": "docs",
+      "message": "Stub implementation - replace with actual Q integration",
+      "confidence": 0.5,
+      "suggested_patch": null,
+      "line_hint": 19
+    }
+  ]
+}

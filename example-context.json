@@ -1,0 +1,8 @@
+{
+  "pr": {
+    "url": "https://github.com/org/repo/pull/123"
+  },
+  "guidelines": {
+    "path": "example-guidelines.md"
+  }
+}

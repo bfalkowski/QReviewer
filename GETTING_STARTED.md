@@ -10,9 +10,9 @@
 - [ ] Set up GitHub token
 - [ ] Configure Amazon Q CLI (or fallback)
 - [ ] Test configuration
-- [ ] Run your first code review
 - [ ] Train on your repository
-- [ ] Apply learned standards
+- [ ] Run your first code review with learned standards
+- [ ] Apply learned standards to future reviews
 
 ---
 
@@ -117,21 +117,60 @@ API Key: ❌ Not required
 
 ---
 
-## 🎯 **Step 3: Your First Code Review**
+## 🧠 **Step 3: Train on Your Repository**
 
-### **3.1 Review a GitHub PR**
+### **3.1 Initial Training**
+```bash
+# Train on your own repository
+qrev learn https://github.com/yourusername/yourrepo \
+  --module src \
+  --module tests \
+  --max-prs-per-module 50 \
+  --strategy representative \
+  --output-dir my_training
+```
+
+**What This Does:**
+- Analyzes your repository's PR history
+- Learns your team's coding patterns
+- Generates custom review standards
+- Saves results to `my_training/` directory
+
+### **3.2 Training Strategies**
+
+| Strategy | Use Case | Command |
+|----------|----------|---------|
+| **Recent** | Current standards | `--strategy recent` |
+| **Representative** | Balanced learning | `--strategy representative` |
+| **High Impact** | Critical issues | `--strategy high_impact` |
+
+### **3.3 Apply Learned Standards**
+```bash
+# Review with your learned standards
+qrev review --inp pr-diff.json \
+  --standards learned_python,learned_tests \
+  --out findings.json
+```
+
+---
+
+## 🎯 **Step 4: Your First Code Review**
+
+### **4.1 Review a GitHub PR with Learned Standards**
 ```bash
 # Fetch PR diff from any repository
 qrev fetch --pr https://github.com/owner/repo/pull/123 --out pr-diff.json
 
-# Review the code with AI
-qrev review --inp pr-diff.json --out findings.json
+# Review using your learned standards
+qrev review --inp pr-diff.json \
+  --standards learned_python,learned_tests \
+  --out findings.json
 
 # View results in human-readable format
 qrev summarize --inp findings.json
 ```
 
-### **3.2 Review with Custom Guidelines**
+### **4.2 Review with Custom Guidelines**
 ```bash
 # Create guidelines file
 cat > my-guidelines.md << EOF
@@ -152,50 +191,13 @@ EOF
 qrev review --inp pr-diff.json --guidelines my-guidelines.md --out findings.json
 ```
 
-### **3.3 Review with Standards**
+### **4.3 Review with Built-in Standards**
 ```bash
 # Apply built-in standards
 qrev review --inp pr-diff.json --standards security,performance --out findings.json
 
 # List available standards
 qrev standards list
-```
-
----
-
-## 🧠 **Step 4: Train on Your Repository**
-
-### **4.1 Initial Training**
-```bash
-# Train on your own repository
-qrev learn https://github.com/yourusername/yourrepo \
-  --module src \
-  --module tests \
-  --max-prs-per-module 50 \
-  --strategy representative \
-  --output-dir my_training
-```
-
-**What This Does:**
-- Analyzes your repository's PR history
-- Learns your team's coding patterns
-- Generates custom review standards
-- Saves results to `my_training/` directory
-
-### **4.2 Training Strategies**
-
-| Strategy | Use Case | Command |
-|----------|----------|---------|
-| **Recent** | Current standards | `--strategy recent` |
-| **Representative** | Balanced learning | `--strategy representative` |
-| **High Impact** | Critical issues | `--strategy high_impact` |
-
-### **4.3 Apply Learned Standards**
-```bash
-# Review with your learned standards
-qrev review --inp pr-diff.json \
-  --standards learned_python,learned_tests \
-  --out findings.json
 ```
 
 ---
@@ -350,8 +352,8 @@ qrev config env
 ### **What You've Accomplished:**
 ✅ Set up QReviewer with Amazon Q CLI  
 ✅ Verified configuration and connectivity  
-✅ Run your first AI-powered code review  
 ✅ Trained on your repository's patterns  
+✅ Run your first AI-powered code review with learned standards  
 ✅ Applied learned standards to reviews  
 ✅ Set up continuous improvement workflow  
 

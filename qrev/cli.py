@@ -17,8 +17,29 @@ from .models import PRDiff, FindingsReport, ReviewStats
 app = typer.Typer(help="LLM-powered code review tool")
 console = Console()
 
-# Import config commands
+# Import config functions directly
 from .cli_config import show, validate, env, test
+
+
+@app.command()
+def config_show():
+    """Show current QReviewer configuration."""
+    show()
+
+@app.command()
+def config_validate():
+    """Validate current configuration."""
+    validate()
+
+@app.command()
+def config_env():
+    """Show environment variables needed for configuration."""
+    env()
+
+@app.command()
+def config_test():
+    """Test the current LLM configuration."""
+    test()
 
 
 @app.command()
@@ -205,18 +226,6 @@ def summarize(
     except Exception as e:
         console.print(f"❌ Unexpected error: {e}")
         raise typer.Exit(1)
-
-
-@app.command()
-def config():
-    """Configuration management for QReviewer."""
-    pass
-
-# Add config subcommands
-config.add_command(show, name="show")
-config.add_command(validate, name="validate")
-config.add_command(env, name="env")
-config.add_command(test, name="test")
 
 
 def main():

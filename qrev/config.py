@@ -13,7 +13,6 @@ class QReviewerConfig:
     def __init__(self):
         # LLM Configuration
         self.llm_backend: LLMBackend = self._get_llm_backend()
-        self.llm_config = self._get_llm_config()
         
         # GitHub Configuration
         self.github_token: Optional[str] = os.getenv("GITHUB_TOKEN")
@@ -44,6 +43,9 @@ class QReviewerConfig:
         # OpenAI Configuration (fallback)
         self.openai_api_key: Optional[str] = os.getenv("OPENAI_API_KEY")
         self.openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4")
+        
+        # Now set the LLM config after all attributes are available
+        self.llm_config = self._get_llm_config()
     
     def _get_llm_backend(self) -> LLMBackend:
         """Get the configured LLM backend."""
@@ -58,13 +60,27 @@ class QReviewerConfig:
     def _get_llm_config(self) -> dict:
         """Get configuration for the selected LLM backend."""
         if self.llm_backend == "amazon_q":
-            return {
-                "host": self.q_cli_host,
-                "user": self.q_cli_user,
-                "key_path": self.q_cli_key_path,
-                "port": self.q_cli_port,
-                "enabled": bool(self.q_cli_host and self.q_cli_user)
-            }
+            # Check if we should use local execution or SSH
+            if self.q_cli_host and self.q_cli_host not in ["localhost", "127.0.0.1"]:
+                # Remote SSH execution
+                return {
+                    "host": self.q_cli_host,
+                    "user": self.q_cli_user,
+                    "key_path": self.q_cli_key_path,
+                    "port": self.q_cli_port,
+                    "local": False,
+                    "enabled": bool(self.q_cli_host and self.q_cli_user)
+                }
+            else:
+                # Local execution (default)
+                return {
+                    "host": "localhost",
+                    "user": None,
+                    "key_path": None,
+                    "port": None,
+                    "local": True,
+                    "enabled": True  # Always enabled for local execution
+                }
         elif self.llm_backend == "bedrock":
             return {
                 "region": self.aws_region,
@@ -96,10 +112,13 @@ class QReviewerConfig:
         
         # Check specific backend requirements
         if self.llm_backend == "amazon_q":
-            if not self.q_cli_host:
-                errors.append("Q_CLI_HOST environment variable is required for Amazon Q CLI")
-            if not self.q_cli_user:
-                errors.append("Q_CLI_USER environment variable is required for Amazon Q CLI")
+            # For local execution, no additional requirements
+            # For remote execution, check SSH requirements
+            if self.q_cli_host and self.q_cli_host not in ["localhost", "127.0.0.1"]:
+                if not self.q_cli_host:
+                    errors.append("Q_CLI_HOST environment variable is required for remote Amazon Q CLI")
+                if not self.q_cli_user:
+                    errors.append("Q_CLI_USER environment variable is required for remote Amazon Q CLI")
         elif self.llm_backend == "bedrock":
             if not self.aws_access_key_id:
                 errors.append("AWS_ACCESS_KEY_ID environment variable is required for Bedrock")

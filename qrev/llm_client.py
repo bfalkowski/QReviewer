@@ -81,14 +81,14 @@ class BaseLLMClient:
 
 
 class AmazonQCLIClient(BaseLLMClient):
-    """Amazon Q CLI client using SSH to remote machine."""
+    """Amazon Q CLI client using local execution or SSH to remote machine."""
     
     def __init__(self):
         super().__init__()
         self.q_config = self.config.llm_config
     
     async def review_hunk(self, hunk: Hunk, guidelines: Optional[str] = None) -> List[Finding]:
-        """Review a code hunk using Amazon Q CLI via SSH."""
+        """Review a code hunk using Amazon Q CLI."""
         try:
             # Build the prompt
             system_prompt = get_system_prompt()
@@ -97,8 +97,13 @@ class AmazonQCLIClient(BaseLLMClient):
             # Create the Q CLI command
             q_command = self._build_q_command(system_prompt, user_prompt)
             
-            # Execute via SSH
-            response = await self._execute_ssh_command(q_command)
+            # Execute Q CLI command
+            if self.q_config.get("local", True):
+                # Local execution
+                response = await self._execute_local_command(q_command)
+            else:
+                # Remote SSH execution
+                response = await self._execute_ssh_command(q_command)
             
             # Parse the response
             return self._parse_findings_response(response)
@@ -125,11 +130,43 @@ Respond with a JSON array of findings, each with:
 - suggested_patch: Optional code suggestion
 """
         
-        # Escape the prompt for shell execution
-        escaped_prompt = combined_prompt.replace('"', '\\"').replace("'", "\\'")
+        # Clean up the prompt and escape properly for shell execution
+        cleaned_prompt = combined_prompt.strip().replace('\n', ' ').replace('"', '\\"')
         
-        # Build the Q CLI command
-        return f'q chat --prompt "{escaped_prompt}"'
+        # Build the Q CLI command with proper escaping
+        return f'q chat --prompt "{cleaned_prompt}"'
+    
+    async def _execute_local_command(self, command: str) -> str:
+        """Execute Q CLI command locally."""
+        logger.debug(f"Executing local Q CLI command: {command}")
+        
+        try:
+            # Execute the command locally
+            process = await asyncio.create_subprocess_exec(
+                "bash", "-c", command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=self.config.review_timeout_sec
+            )
+            
+            if process.returncode != 0:
+                error_msg = stderr.decode() if stderr else "Unknown Q CLI error"
+                raise LLMClientError(f"Q CLI command failed: {error_msg}")
+            
+            response = stdout.decode().strip()
+            if not response:
+                raise LLMClientError("Empty response from Q CLI")
+            
+            return response
+            
+        except asyncio.TimeoutError:
+            raise LLMClientError(f"Q CLI command timed out after {self.config.review_timeout_sec} seconds")
+        except Exception as e:
+            raise LLMClientError(f"Local Q CLI execution error: {e}")
     
     async def _execute_ssh_command(self, command: str) -> str:
         """Execute a command on the remote Q machine via SSH."""

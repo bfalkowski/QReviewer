@@ -19,6 +19,14 @@ Amazon Q CLI provides:
 - **Multi-language Support**: Excellent coverage across Python, JavaScript, Java, Go, etc.
 - **Team Learning**: Adapts to your team's coding standards over time
 
+### **Execution Modes**
+
+| Mode | Configuration | Use Case |
+|------|---------------|----------|
+| **Local (Default)** | No SSH config needed | Same machine as Q CLI |
+| **Remote SSH** | Set `Q_CLI_HOST` and `Q_CLI_USER` | Different machine via SSH |
+| **Fallback** | Set Bedrock or OpenAI credentials | When Q CLI unavailable |
+
 ## Overview
 
 QReviewer fetches GitHub PR diffs, splits them into reviewable hunks, and uses **Amazon Q CLI** (or your chosen LLM backend) to analyze each hunk for code quality issues. It produces structured findings that can be consumed by other tools or agents.
@@ -35,6 +43,7 @@ QReviewer fetches GitHub PR diffs, splits them into reviewable hunks, and uses *
 - 🚀 **REST API**: FastAPI service for integration with other tools and services
 - 📈 **Continuous Improvement**: Retrain and update standards as repositories evolve
 - ⚙️ **Multi-Backend LLM**: Switch between Amazon Q CLI, AWS Bedrock, and OpenAI
+- 🛡️ **Robust Error Handling**: Graceful degradation and clear error messages
 
 ## 🧠 AI Learning System
 
@@ -204,6 +213,82 @@ qrev config env
 
 # Test LLM connection
 qrev config test
+```
+
+### 🛡️ Error Handling & Resilience
+
+QReviewer provides robust error handling and graceful degradation:
+
+#### **LLM Backend Failures**
+
+When Amazon Q CLI is unavailable, QReviewer:
+
+- **Returns Structured Errors**: JSON responses with detailed error information
+- **Maintains API Contract**: HTTP 200 responses with error context in findings
+- **Provides Fallback Options**: Automatic switch to Bedrock or OpenAI if configured
+- **Continues Operation**: System remains functional for non-LLM operations
+
+#### **Error Response Examples**
+
+**Q CLI Not Found:**
+```json
+{
+  "findings": [{
+    "severity": "info",
+    "category": "system", 
+    "message": "LLM response parsing failed: Amazon Q CLI error: Local Q CLI execution error: Q CLI command failed: bash: q: command not found",
+    "confidence": 0.1
+  }]
+}
+```
+
+**Configuration Issues:**
+```bash
+qrev config validate
+❌ Configuration errors:
+   - LLM backend 'amazon_q' is not properly configured
+```
+
+#### **Common Error Scenarios**
+
+| Scenario | Error Message | Resolution |
+|----------|---------------|------------|
+| **Q CLI Missing** | `bash: q: command not found` | Install Q CLI or use fallback backend |
+| **SSH Connection Failed** | `SSH command failed: Connection refused` | Check SSH config and network |
+| **Rate Limit Exceeded** | `GitHub API error: 403` | Wait for rate limit reset |
+| **Invalid PR URL** | `Invalid GitHub repository URL` | Check PR URL format |
+| **Authentication Failed** | `GitHub API error: 401` | Verify GITHUB_TOKEN |
+
+#### **Fallback Strategy**
+
+```bash
+# Primary: Amazon Q CLI (local or SSH)
+QREVIEWER_LLM_BACKEND=amazon_q
+
+# Fallback 1: AWS Bedrock
+QREVIEWER_LLM_BACKEND=bedrock
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+
+# Fallback 2: OpenAI
+QREVIEWER_LLM_BACKEND=openai
+OPENAI_API_KEY=your_key
+```
+
+#### **Debugging & Troubleshooting**
+
+```bash
+# Test current configuration
+qrev config test
+
+# Show detailed config info
+qrev config show
+
+# Validate all settings
+qrev config validate
+
+# Check environment variables
+qrev config env
 ```
 
 ## Usage

@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.text import Text
-from ..config import config
+from qrev.config import config
 
 console = Console()
 app = typer.Typer(help="QReviewer configuration management")
@@ -158,17 +158,18 @@ def test():
     console.print(f"🧪 Testing {config.llm_backend} backend...")
     
     try:
-        from ..llm_client import get_llm_client
+        from qrev.llm_client import get_llm_client
         llm_client = get_llm_client()
         
         # Create a test hunk
-        from ..models import Hunk
+        from qrev.models import Hunk
         test_hunk = Hunk(
             file_path="test.py",
             hunk_header="@@ -1,3 +1,6 @@",
+            patch_text="def test_function():\n    return 'hello world'\n",
             start_line=1,
             end_line=6,
-            content="def test_function():\n    return 'hello world'\n"
+            language="python"
         )
         
         console.print("📝 Testing with sample code...")

@@ -47,6 +47,42 @@ QReviewer fetches GitHub PR diffs, splits them into reviewable hunks, and uses *
 - ⚙️ **Multi-Backend LLM**: Switch between Amazon Q CLI, AWS Bedrock, and OpenAI
 - 🛡️ **Robust Error Handling**: Graceful degradation and clear error messages
 - 📋 **Review-Only Mode**: Generate local reports without posting to GitHub
+- 🎯 **Multiple Output Formats**: JSON, HTML, and summary formats for different use cases
+
+## 📋 **Review-Only Mode Benefits**
+
+The new `review-only` mode provides several advantages:
+
+- **🔒 Safe Testing**: Review PRs without affecting GitHub repositories
+- **📊 Local Reports**: Generate reports for offline review and team sharing
+- **🎨 Multiple Formats**: Choose between JSON, HTML, or summary output
+- **🚀 CI/CD Ready**: JSON output perfect for automated processing
+- **👥 Team Collaboration**: HTML reports for meetings and documentation
+- **⚡ Fast Iteration**: Quick review cycles without GitHub API calls
+
+### **Output Format Options**
+
+| Format | Command | Use Case | Example |
+|--------|---------|----------|---------|
+| **JSON** | `--format json` | Programmatic processing, CI/CD pipelines | `qrev review-only --pr <URL> --format json` |
+| **HTML** | `--format html` | Team meetings, documentation, sharing | `qrev review-only --pr <URL> --format html` |
+| **Summary** | `--format summary` | Quick review, command line usage | `qrev review-only --pr <URL> --format summary` |
+
+**Example Workflow:**
+```bash
+# 1. Quick review with summary
+qrev review-only --pr https://github.com/org/repo/pull/123 --format summary
+
+# 2. Generate HTML report for team
+qrev review-only --pr https://github.com/org/repo/pull/123 \
+  --standards learned_python,security \
+  --format html
+
+# 3. JSON output for CI/CD
+qrev review-only --pr https://github.com/org/repo/pull/123 \
+  --standards learned_python \
+  --format json
+```
 
 ## 🧠 AI Learning System
 
@@ -92,7 +128,7 @@ QReviewer's AI learning system analyzes repository review history to automatical
 
 ```bash
 # Learn from specific modules in a repository
-qrev learn https://github.com/owner/repo \
+python -m qrev.cli_learning learn https://github.com/owner/repo \
   --module src/api \
   --module lib/core \
   --module tests \
@@ -101,10 +137,10 @@ qrev learn https://github.com/owner/repo \
   --strategy representative
 
 # List available sampling strategies
-qrev list-strategies
+python -m qrev.cli_learning list-strategies
 
 # Learn with custom output directory
-qrev learn https://github.com/owner/repo \
+python -m qrev.cli_learning learn https://github.com/owner/repo \
   --module src \
   --output-dir custom_results
 ```
@@ -296,7 +332,23 @@ qrev config env
 
 ## Usage
 
-### CLI Commands
+### CLI Commands Overview
+
+QReviewer provides several CLI interfaces for different purposes:
+
+| Command | Module | Purpose | Example |
+|---------|--------|---------|---------|
+| **`qrev`** | `qrev.cli` | Main CLI for code review operations | `qrev fetch --pr <URL>` |
+| **`python -m qrev.cli_learning`** | `qrev.cli_learning` | AI learning and training commands | `python -m qrev.cli_learning learn <REPO>` |
+| **`python -m qrev.cli_config`** | `qrev.cli_config` | Configuration management | `python -m qrev.cli_config show` |
+
+### When to Use Each CLI Module
+
+- **`qrev`**: Daily code review operations, fetching PRs, reviewing code
+- **`python -m qrev.cli_learning`**: One-time training on repositories, learning new standards
+- **`python -m qrev.cli_config`**: Setup and troubleshooting, configuration management
+
+### Main CLI Commands (`qrev`)
 
 #### 1. Fetch PR Files
 
@@ -340,6 +392,25 @@ qrev review-only --pr https://github.com/org/repo/pull/123 \
   --format summary
 ```
 
+#### Review-Only Output Formats
+
+The `review-only` command supports multiple output formats:
+
+| Format | Command | Output | Use Case |
+|--------|---------|--------|----------|
+| **JSON** | `--format json` | Structured data | Programmatic processing, CI/CD |
+| **HTML** | `--format html` | Web report | Sharing with team, documentation |
+| **Summary** | `--format summary` | Console summary + JSON | Quick review, command line |
+
+**Example with all formats:**
+```bash
+# Generate HTML report (creates both .html and .json files)
+qrev review-only --pr https://github.com/org/repo/pull/123 \
+  --standards learned_python,security \
+  --out my-review \
+  --format html
+```
+
 #### 3. Summarize Findings
 
 ```bash
@@ -367,6 +438,34 @@ python -m qrev.cli_learning learn https://github.com/owner/repo \
   --output-dir custom_results
 ```
 
+### Learning CLI Commands (`python -m qrev.cli_learning`)
+
+#### Available Commands
+
+```bash
+# Learn from repository
+python -m qrev.cli_learning learn <REPO_URL> [OPTIONS]
+
+# List sampling strategies
+python -m qrev.cli_learning list-strategies
+
+# Show help
+python -m qrev.cli_learning --help
+python -m qrev.cli_learning learn --help
+```
+
+#### Learning Options
+
+| Option | Short | Default | Description |
+|--------|-------|---------|-------------|
+| `--module` | `-m` | `src, lib, tests` | Module paths to analyze |
+| `--max-prs-per-module` | `-p` | `50` | Max PRs per module |
+| `--max-total-prs` | `-t` | `500` | Max total PRs |
+| `--output-dir` | `-o` | `learning_results` | Output directory |
+| `--strategy` | `-s` | `representative` | Sampling strategy |
+| `--no-comments` | | `True` | Exclude PR comments |
+| `--no-reviews` | | `True` | Exclude PR reviews |
+
 #### 5. Standards Management
 
 ```bash
@@ -378,6 +477,22 @@ qrev review --inp pr-diff.json --standards security,performance
 
 # Create custom standards
 qrev standards create --name "team_standards" --file standards.json
+```
+
+### Configuration CLI Commands (`qrev config-*`)
+
+```bash
+# Show current configuration
+qrev config-show
+
+# Validate configuration
+qrev config-validate
+
+# Show environment variables needed
+qrev config-env
+
+# Test LLM connection
+qrev config-test
 ```
 
 ### WaaP Agent Mode

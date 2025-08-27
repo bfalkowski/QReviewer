@@ -1,0 +1,46 @@
+{
+  "name": "python_style",
+  "description": "Python style and best practices",
+  "version": "1.0.0",
+  "rules": [
+    {
+      "id": "STY001",
+      "category": "naming",
+      "pattern": "def [a-z][a-z0-9_]*\\(",
+      "message": "Function name should be snake_case",
+      "severity": "minor",
+      "suggestion": "Rename function to use snake_case: def my_function():"
+    },
+    {
+      "id": "STY002",
+      "category": "imports",
+      "pattern": "import \\*",
+      "message": "Wildcard imports can cause namespace pollution",
+      "severity": "major",
+      "suggestion": "Import only what you need: from module import specific_function"
+    },
+    {
+      "id": "STY003",
+      "category": "type_hints",
+      "pattern": "def [^(]+\\([^)]*\\):",
+      "message": "Missing return type annotation",
+      "severity": "minor",
+      "suggestion": "Add return type: def function() -> ReturnType:"
+    }
+  ],
+  "severity_weights": {
+    "critical": 1.0,
+    "major": 1.5,
+    "minor": 1.0
+  },
+  "categories": [
+    "naming",
+    "imports",
+    "type_hints",
+    "formatting"
+  ],
+  "metadata": {
+    "framework": "pep8",
+    "language": "python"
+  }
+}

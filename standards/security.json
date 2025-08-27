@@ -1,0 +1,46 @@
+{
+  "name": "security",
+  "description": "Security-focused code review standards",
+  "version": "1.0.0",
+  "rules": [
+    {
+      "id": "SEC001",
+      "category": "authentication",
+      "pattern": "(password|secret|token|key)\\s*=\\s*['\\\"][^'\\\"]+['\\\"]",
+      "message": "Hardcoded credentials detected - use environment variables",
+      "severity": "critical",
+      "suggestion": "Replace with: os.getenv('SECRET_NAME')"
+    },
+    {
+      "id": "SEC002",
+      "category": "injection",
+      "pattern": "eval\\s*\\(",
+      "message": "eval() usage detected - potential code injection risk",
+      "severity": "critical",
+      "suggestion": "Use safer alternatives like ast.literal_eval() or json.loads()"
+    },
+    {
+      "id": "SEC003",
+      "category": "input_validation",
+      "pattern": "\\.format\\(.*\\+.*\\)",
+      "message": "String concatenation in format() - potential injection",
+      "severity": "major",
+      "suggestion": "Use f-strings or proper escaping"
+    }
+  ],
+  "severity_weights": {
+    "critical": 3.0,
+    "major": 2.0,
+    "minor": 1.0
+  },
+  "categories": [
+    "authentication",
+    "injection",
+    "input_validation",
+    "crypto"
+  ],
+  "metadata": {
+    "framework": "general",
+    "language": "python"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "performance",
+  "description": "Performance optimization guidelines",
+  "version": "1.0.0",
+  "rules": [
+    {
+      "id": "PERF001",
+      "category": "loops",
+      "pattern": "for.*in.*range\\(len\\(",
+      "message": "Inefficient loop pattern - use enumerate()",
+      "severity": "minor",
+      "suggestion": "Replace with: for i, item in enumerate(items):"
+    },
+    {
+      "id": "PERF002",
+      "category": "data_structures",
+      "pattern": "\\.append\\(\\)\\s*in\\s*loop",
+      "message": "List appending in loop - consider list comprehension",
+      "severity": "minor",
+      "suggestion": "Use: [f(x) for x in items] instead of loop + append"
+    }
+  ],
+  "severity_weights": {
+    "critical": 2.0,
+    "major": 1.5,
+    "minor": 1.0
+  },
+  "categories": [
+    "loops",
+    "data_structures",
+    "algorithms"
+  ],
+  "metadata": {
+    "framework": "general",
+    "language": "python"
+  }
+}

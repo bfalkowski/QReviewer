@@ -1,0 +1,37 @@
+{
+  "name": "team_specific",
+  "description": "Team-specific coding standards for QReviewer project",
+  "version": "1.0.0",
+  "rules": [
+    {
+      "id": "TEAM001",
+      "category": "documentation",
+      "pattern": "def [^(]+\\([^)]*\\):\\s*$",
+      "message": "Function missing docstring",
+      "severity": "minor",
+      "suggestion": "Add docstring: \"\"\"Function description.\"\"\""
+    },
+    {
+      "id": "TEAM002",
+      "category": "testing",
+      "pattern": "def test_",
+      "message": "Test function should have descriptive name",
+      "severity": "minor",
+      "suggestion": "Use descriptive test names: test_function_behavior()"
+    }
+  ],
+  "severity_weights": {
+    "critical": 3.0,
+    "major": 2.0,
+    "minor": 1.0
+  },
+  "categories": [
+    "documentation",
+    "testing",
+    "team_preferences"
+  ],
+  "metadata": {
+    "team": "QReviewer",
+    "framework": "custom"
+  }
+}

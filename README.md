@@ -70,16 +70,16 @@ The new `review-only` mode provides several advantages:
 
 **Example Workflow:**
 ```bash
-# 1. Quick review with summary
-qrev review-only --pr https://github.com/org/repo/pull/123 --format summary
+# 1. Quick review with summary (SSH format)
+qrev review-only --pr git@github.com:org/repo/pull/123 --format summary
 
-# 2. Generate HTML report for team
+# 2. Generate HTML report for team (HTTPS format)
 qrev review-only --pr https://github.com/org/repo/pull/123 \
   --standards learned_python,security \
   --format html
 
-# 3. JSON output for CI/CD
-qrev review-only --pr https://github.com/org/repo/pull/123 \
+# 3. JSON output for CI/CD (SSH format)
+qrev review-only --pr git@github.com:org/repo/pull/123 \
   --standards learned_python \
   --format json
 ```
@@ -128,7 +128,17 @@ QReviewer's AI learning system analyzes repository review history to automatical
 
 ```bash
 # Learn from specific modules in a repository
+# HTTPS format:
 python -m qrev.cli_learning learn https://github.com/owner/repo \
+  --module src/api \
+  --module lib/core \
+  --module tests \
+  --max-prs-per-module 50 \
+  --max-total-prs 200 \
+  --strategy representative
+
+# SSH format:
+python -m qrev.cli_learning learn git@github.com:owner/repo \
   --module src/api \
   --module lib/core \
   --module tests \
@@ -190,8 +200,14 @@ pip install -e .
 #### **Option 1: Amazon Q CLI (Recommended - Default)**
 
 ```bash
-# Set GitHub token
+# GitHub Authentication (Choose ONE option below)
+
+# Option A: GitHub Token (for HTTPS repositories)
 export GITHUB_TOKEN=your_github_token_here
+
+# Option B: SSH Authentication (for SSH repositories - Recommended)
+# No export needed - uses your existing SSH setup
+# Ensure your SSH key is added: ssh-add ~/.ssh/id_rsa
 
 # Amazon Q CLI Configuration
 export QREVIEWER_LLM_BACKEND=amazon_q
@@ -234,6 +250,78 @@ export OPENAI_MODEL=gpt-4
 
 # Optional: Set API key for production use
 export QREVIEWER_API_KEY=your_api_key_here
+```
+
+#### **GitHub Repository Types: SSH vs HTTPS**
+
+QReviewer supports both SSH and HTTPS repositories:
+
+**SSH Repositories (Recommended):**
+```bash
+# Repository URL format
+git@github.com:owner/repo.git
+
+# PR URL format for QReviewer
+git@github.com:owner/repo/pull/123
+
+# Benefits: No token needed, more secure, no rate limits
+# Requirements: SSH key configured and added to ssh-agent
+```
+
+**HTTPS Repositories:**
+```bash
+# Repository URL format
+https://github.com/owner/repo.git
+
+# PR URL format for QReviewer
+https://github.com/owner/repo/pull/123
+
+# Benefits: Works everywhere, no SSH setup
+# Requirements: GITHUB_TOKEN environment variable
+```
+
+**Check Your Repository Type:**
+```bash
+# See if you're using SSH or HTTPS
+git remote -v
+
+# If it shows git@github.com:owner/repo.git → SSH
+# If it shows https://github.com/owner/repo.git → HTTPS
+```
+
+#### **SSH Setup & Verification**
+
+**1. Check SSH Key:**
+```bash
+# List your SSH keys
+ls -la ~/.ssh/
+
+# Add your key to ssh-agent
+ssh-add ~/.ssh/id_rsa
+
+# Test GitHub SSH connection
+ssh -T git@github.com
+# Should show: "Hi username! You've successfully authenticated..."
+```
+
+**2. SSH Configuration (Optional):**
+```bash
+# Create/edit SSH config for easier access
+cat >> ~/.ssh/config << EOF
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_rsa
+    AddKeysToAgent yes
+EOF
+```
+
+**3. Verify SSH Access:**
+```bash
+# Test with your repository
+git ls-remote git@github.com:bfalkowski/QReviewer.git
+
+# Should show refs (branches, tags) without errors
 ```
 
 ### Configuration Management
@@ -353,8 +441,11 @@ QReviewer provides several CLI interfaces for different purposes:
 #### 1. Fetch PR Files
 
 ```bash
-# Fetch PR diff and save to file
+# Fetch PR diff and save to file (HTTPS)
 qrev fetch --pr https://github.com/org/repo/pull/123 --out pr-diff.json
+
+# Fetch PR diff and save to file (SSH)
+qrev fetch --pr git@github.com:org/repo/pull/123 --out pr-diff.json
 
 # Or use the module directly
 python -m qrev.cli fetch --pr https://github.com/org/repo/pull/123 --out pr-diff.json
@@ -377,7 +468,11 @@ qrev review --inp pr-diff.json --out findings.json --max-concurrency 8
 
 ```bash
 # Review PR directly and generate local report (no GitHub posting)
+# HTTPS format:
 qrev review-only --pr https://github.com/org/repo/pull/123 --out review.json
+
+# SSH format:
+qrev review-only --pr git@github.com:org/repo/pull/123 --out review.json
 
 # Review with learned standards and generate HTML report
 qrev review-only --pr https://github.com/org/repo/pull/123 \
@@ -422,7 +517,14 @@ qrev summarize --inp findings.json
 
 ```bash
 # Learn from specific modules in a repository
+# HTTPS format:
 python -m qrev.cli_learning learn https://github.com/owner/repo \
+  --module src/api \
+  --module lib/core \
+  --max-prs-per-module 50
+
+# SSH format:
+python -m qrev.cli_learning learn git@github.com:owner/repo \
   --module src/api \
   --module lib/core \
   --max-prs-per-module 50

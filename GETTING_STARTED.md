@@ -29,9 +29,55 @@ pip install -r requirements.txt
 
 # Install in development mode
 pip install -e .
+
+### **1.2 Add QReviewer to Your PATH**
+
+To use the `qrev` command from anywhere, add it to your PATH:
+
+```bash
+# Add to your shell profile (~/.zshrc, ~/.bashrc, or ~/.bash_profile)
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+
+# Or add the project directory to PATH
+echo 'export PATH="$PWD:$PATH"' >> ~/.zshrc
+
+# Reload your shell profile
+source ~/.zshrc
+
+# Verify qrev is available
+which qrev
+qrev --help
 ```
 
-### **1.2 Set Up GitHub Token**
+**Alternative: Use Python Module Syntax**
+```bash
+# If PATH setup doesn't work, use this format instead:
+python -m qrev.cli --help
+python -m qrev.cli_learning learn --help
+python -m qrev.cli_config show
+```
+
+### **1.3 Set Up GitHub Authentication**
+
+**Choose ONE option below:**
+
+#### **Option A: SSH Authentication (Recommended)**
+```bash
+# Check if you're using SSH
+git remote -v
+
+# If it shows git@github.com:owner/repo.git, you're using SSH
+# No additional setup needed - QReviewer will use your SSH key!
+
+# Verify SSH access
+ssh -T git@github.com
+# Should show: "Hi username! You've successfully authenticated..."
+
+# Add your SSH key to ssh-agent (if not already added)
+ssh-add ~/.ssh/id_rsa
+```
+
+#### **Option B: GitHub Token (for HTTPS repositories)**
 ```bash
 # Create GitHub Personal Access Token
 # Go to: https://github.com/settings/tokens
@@ -45,7 +91,66 @@ echo 'export GITHUB_TOKEN="ghp_your_token_here"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-### **1.3 Configure LLM Backend**
+### **1.4 SSH Setup (if using SSH repositories)**
+
+If you chose SSH authentication, ensure your SSH key is properly configured:
+
+```bash
+# Check if you have SSH keys
+ls -la ~/.ssh/
+
+# Add your key to ssh-agent
+ssh-add ~/.ssh/id_rsa
+
+# Test GitHub SSH connection
+ssh -T git@github.com
+
+# Verify access to your repository
+git ls-remote git@github.com:yourusername/yourrepo.git
+```
+
+**SSH Key Not Found?**
+```bash
+# Generate a new SSH key
+ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
+
+# Add to GitHub: https://github.com/settings/keys
+# Copy the public key: cat ~/.ssh/id_rsa.pub
+```
+
+### **1.5 Repository URL Formats**
+
+QReviewer supports both SSH and HTTPS repository URLs:
+
+**SSH Format (Recommended):**
+```bash
+# Repository URL
+git@github.com:owner/repo.git
+
+# PR URL for QReviewer
+git@github.com:owner/repo/pull/123
+
+# Benefits: No token needed, more secure, no rate limits
+```
+
+**HTTPS Format:**
+```bash
+# Repository URL
+https://github.com/owner/repo.git
+
+# PR URL for QReviewer
+https://github.com/owner/repo/pull/123
+
+# Benefits: Works everywhere, no SSH setup required
+```
+
+**Check Your Repository Type:**
+```bash
+git remote -v
+# Shows your current repository format
+```
+
+### **1.6 Configure LLM Backend**
 
 #### **Option A: Amazon Q CLI (Recommended)**
 ```bash
@@ -122,7 +227,16 @@ API Key: ❌ Not required
 ### **3.1 Initial Training**
 ```bash
 # Train on your own repository
+# HTTPS format:
 python -m qrev.cli_learning learn https://github.com/yourusername/yourrepo \
+  --module src \
+  --module tests \
+  --max-prs-per-module 50 \
+  --strategy representative \
+  --output-dir my_training
+
+# SSH format (if your repo uses SSH):
+python -m qrev.cli_learning learn git@github.com:yourusername/yourrepo \
   --module src \
   --module tests \
   --max-prs-per-module 50 \
@@ -161,7 +275,14 @@ qrev review --inp pr-diff.json \
 #### **Option A: Review-Only Mode (Recommended for First-Time Users)**
 ```bash
 # Review PR directly without fetching first (generates local report only)
+# HTTPS format:
 qrev review-only --pr https://github.com/owner/repo/pull/123 \
+  --standards learned_python,learned_tests \
+  --out my-review.json \
+  --format summary
+
+# SSH format:
+qrev review-only --pr git@github.com:owner/repo/pull/123 \
   --standards learned_python,learned_tests \
   --out my-review.json \
   --format summary
@@ -176,7 +297,11 @@ qrev review-only --pr https://github.com/owner/repo/pull/123 \
 #### **Option B: Traditional Two-Step Process**
 ```bash
 # Fetch PR diff from any repository
+# HTTPS format:
 qrev fetch --pr https://github.com/owner/repo/pull/123 --out pr-diff.json
+
+# SSH format:
+qrev fetch --pr git@github.com:owner/repo/pull/123 --out pr-diff.json
 
 # Review using your learned standards
 qrev review --inp pr-diff.json \

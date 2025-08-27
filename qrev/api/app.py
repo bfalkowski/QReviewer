@@ -99,7 +99,7 @@ async def review(req: ReviewRequest, _ok: bool = Depends(require_api_key)):
         
         # Step 2: Review hunks
         with timed(step_durations, "review_ms"):
-            findings = await review_hunks_async(diff, req.rules)
+            findings = await review_hunks_async(diff, None)  # No rules for now
         
         # Step 3: Render HTML report
         with timed(step_durations, "render_ms"):

@@ -2,7 +2,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from qrev.api.app import app
 from qrev.models import Finding
 
@@ -73,8 +73,8 @@ class TestRootEndpoint:
 class TestReviewEndpoint:
     """Test main review endpoint."""
     
-    @patch('qrev.api.compat.fetch_pr_diff_async')
-    @patch('qrev.api.compat.review_hunks_async')
+    @patch('qrev.api.app.fetch_pr_diff_async')
+    @patch('qrev.api.app.review_hunks_async')
     def test_review_endpoint_success(self, mock_review, mock_fetch, mock_finding, mock_diff_data):
         """Test successful review endpoint call."""
         # Mock the async functions
@@ -103,7 +103,7 @@ class TestReviewEndpoint:
         response = client.post("/review", json=request_data)
         assert response.status_code == 422  # Validation error
     
-    @patch('qrev.api.compat.fetch_pr_diff_async')
+    @patch('qrev.api.app.fetch_pr_diff_async')
     def test_review_endpoint_github_error(self, mock_fetch):
         """Test review endpoint with GitHub API error."""
         mock_fetch.side_effect = Exception("GitHub API error")
@@ -123,7 +123,7 @@ class TestReviewEndpoint:
 class TestFetchPREndpoint:
     """Test fetch PR endpoint."""
     
-    @patch('qrev.api.compat.fetch_pr_diff_async')
+    @patch('qrev.api.app.fetch_pr_diff_async')
     def test_fetch_pr_success(self, mock_fetch, mock_diff_data):
         """Test successful PR fetch."""
         mock_fetch.return_value = mock_diff_data
@@ -149,7 +149,7 @@ class TestFetchPREndpoint:
 class TestReviewHunksEndpoint:
     """Test review hunks endpoint."""
     
-    @patch('qrev.api.compat.review_hunks_async')
+    @patch('qrev.api.app.review_hunks_async')
     def test_review_hunks_success(self, mock_review, mock_finding, mock_diff_data):
         """Test successful hunks review."""
         mock_review.return_value = [mock_finding]
@@ -178,7 +178,7 @@ class TestRenderReportEndpoint:
     def test_render_report_success(self, mock_finding):
         """Test successful report rendering."""
         request_data = {
-            "findings": [mock_finding.dict()]
+            "findings": [mock_finding.model_dump()]
         }
         
         response = client.post("/render_report", json=request_data)
@@ -208,7 +208,7 @@ class TestScoreEndpoint:
     def test_score_success(self, mock_finding):
         """Test successful scoring."""
         request_data = {
-            "findings": [mock_finding.dict()]
+            "findings": [mock_finding.model_dump()]
         }
         
         response = client.post("/score", json=request_data)
@@ -261,3 +261,4 @@ class TestSecurity:
         # This would require more complex mocking of the security middleware
         # For now, we'll test the basic functionality
         pass
+

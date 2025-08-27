@@ -1,10 +1,11 @@
 """Security middleware for QReviewer API."""
 
 import os
+from typing import Union
 from fastapi import Header, HTTPException, status
 
 
-async def require_api_key(authorization: str | None = Header(default=None)) -> bool:
+async def require_api_key(authorization: Union[str, None] = Header(default=None)) -> bool:
     """
     Validate API key from Authorization header.
     

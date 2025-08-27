@@ -16,6 +16,84 @@ QReviewer fetches GitHub PR diffs, splits them into reviewable hunks, and uses A
 - 🎯 **WaaP Integration**: Agent wrapper for team.yaml workflows
 - 📋 **Guidelines Support**: Custom project guidelines for consistent reviews
 - 🚀 **REST API**: FastAPI service for integration with other tools and services
+- 📈 **Continuous Improvement**: Retrain and update standards as repositories evolve
+
+## 🧠 AI Learning System
+
+QReviewer's AI learning system analyzes repository review history to automatically generate new standards, identify team preferences, and improve review quality over time.
+
+### What It Learns
+
+- **Code Quality Patterns**: Recurring issues, best practices, and anti-patterns
+- **Team Preferences**: Review styles, approval ratios, and comment patterns
+- **File-Specific Standards**: Language-specific and module-specific patterns
+- **Common Issues**: Frequently identified problems and their solutions
+- **Review Categories**: Security, performance, style, and documentation patterns
+
+### Learning Capabilities
+
+#### Repository Analysis
+- Analyze thousands of PRs efficiently with intelligent sampling
+- Extract patterns from PR comments, reviews, and file changes
+- Generate confidence scores for learned patterns
+- Identify team-specific review preferences
+
+#### Module-Focused Learning
+- Focus on specific modules instead of entire repositories
+- Handle large repositories (100K+ PRs) efficiently
+- Configurable PR limits per module and total
+- Multiple sampling strategies for different learning goals
+
+#### Standards Generation
+- Automatically create new review standards
+- Context-aware rule generation
+- Severity and category classification
+- Integration with existing review workflows
+
+### Learning Strategies
+
+| Strategy | Description | Use Case |
+|----------|-------------|----------|
+| **Recent** | Focus on most recent PRs | Current standards and practices |
+| **Representative** | Sample across time periods | Comprehensive learning |
+| **High Impact** | Focus on PRs with many comments/reviews | Critical issue identification |
+
+### CLI Learning Commands
+
+```bash
+# Learn from specific modules in a repository
+qrev learn https://github.com/owner/repo \
+  --module src/api \
+  --module lib/core \
+  --module tests \
+  --max-prs-per-module 50 \
+  --max-total-prs 200 \
+  --strategy representative
+
+# List available sampling strategies
+qrev list-strategies
+
+# Learn with custom output directory
+qrev learn https://github.com/owner/repo \
+  --module src \
+  --output-dir custom_results
+```
+
+### Learning Output
+
+The system generates:
+- **Individual module results** for targeted analysis
+- **Combined standards** across all modules
+- **Team preferences** and review patterns
+- **Common issues** with confidence scores
+- **JSON output files** for further processing
+
+### Retraining and Updates
+
+- **Retrain anytime** by running the command again
+- **Change focus** by selecting different modules
+- **Update strategies** based on evolving needs
+- **Track progress** across multiple training runs
 
 ## Installation
 
@@ -86,6 +164,39 @@ qrev review --inp pr-diff.json --out findings.json --max-concurrency 8
 qrev summarize --inp findings.json
 ```
 
+#### 4. AI Learning from Repository
+
+```bash
+# Learn from specific modules in a repository
+qrev learn https://github.com/owner/repo \
+  --module src/api \
+  --module lib/core \
+  --max-prs-per-module 50
+
+# List available learning strategies
+qrev list-strategies
+
+# Learn with custom parameters
+qrev learn https://github.com/owner/repo \
+  --module src \
+  --strategy high_impact \
+  --max-total-prs 200 \
+  --output-dir custom_results
+```
+
+#### 5. Standards Management
+
+```bash
+# View available standards
+qrev standards list
+
+# Apply standards to review
+qrev review --inp pr-diff.json --standards security,performance
+
+# Create custom standards
+qrev standards create --name "team_standards" --file standards.json
+```
+
 ### WaaP Agent Mode
 
 For integration with team.yaml workflows:
@@ -143,12 +254,24 @@ uvicorn qrev.api.app:app --reload --host 0.0.0.0 --port 8000
 
 - **`POST /review`** - Complete PR review pipeline (fetch → review → render → score)
 
+#### AI Learning Endpoints
+
+- **`POST /learn_from_repository`** - Learn from repository review history using AI analysis
+- **`GET /learning_status/{task_id}`** - Check status of learning tasks
+- **`POST /apply_learned_standards`** - Apply learned standards to existing standards
+
 #### Composition Endpoints
 
 - **`POST /fetch_pr`** - Fetch PR diff from GitHub
 - **`POST /review_hunks`** - Review code changes using LLM
 - **`POST /render_report`** - Generate HTML report from findings
 - **`POST /score`** - Calculate review score from findings
+
+#### GitHub Integration Endpoints
+
+- **`POST /post_review`** - Post review comments to GitHub PR
+- **`POST /post_comment`** - Post general comments to GitHub PR
+- **`GET /get_reviews`** - Retrieve existing reviews from GitHub PR
 
 #### Utility Endpoints
 
@@ -193,6 +316,31 @@ curl -X POST "http://localhost:8000/render_report" \
 curl -X POST "http://localhost:8000/score" \
   -H "Content-Type: application/json" \
   -d '{"findings": [...]}'
+```
+
+#### AI Learning from Repository
+
+```bash
+# Learn from repository review history
+curl -X POST "http://localhost:8000/learn_from_repository" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_api_key" \
+  -d '{
+    "repositoryUrl": "https://github.com/owner/repo",
+    "maxPRs": 100,
+    "includeComments": true,
+    "includeReviews": true
+  }'
+
+# Post review to GitHub PR
+curl -X POST "http://localhost:8000/post_review" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_api_key" \
+  -d '{
+    "prUrl": "https://github.com/owner/repo/pull/123",
+    "findings": [...],
+    "reviewMessage": "AI-powered code review completed"
+  }'
 ```
 
 ### API Response Format
@@ -474,6 +622,36 @@ make test-api
 3. **Prompts**: Customize prompts in `qrev/prompts.py`
 4. **CLI**: Add new commands in `qrev/cli.py`
 
+### New AI Learning Modules
+
+1. **`qrev/learning.py`** - Repository analysis and pattern extraction
+2. **`qrev/cli_learning.py`** - CLI for module-focused learning
+3. **`qrev/standards.py`** - Review standards and context management
+4. **`qrev/github_review.py`** - GitHub PR review and commenting
+
+### Architecture Overview
+
+```
+QReviewer
+├── Core Review Engine
+│   ├── PR fetching and parsing
+│   ├── Hunk extraction and analysis
+│   └── LLM integration (Amazon Q)
+├── AI Learning System
+│   ├── Repository analysis
+│   ├── Pattern extraction
+│   ├── Standards generation
+│   └── Module-focused learning
+├── Standards Management
+│   ├── Context-aware rules
+│   ├── Team preferences
+│   └── Custom guidelines
+└── GitHub Integration
+    ├── Review posting
+    ├── Inline comments
+    └── PR management
+```
+
 ## Testing
 
 ### Running Tests
@@ -504,6 +682,11 @@ The test suite covers:
 - ✅ Security middleware
 - ✅ HTML report generation
 - ✅ Utility functions
+- ✅ AI learning system
+- ✅ Module-focused learning
+- ✅ Standards management
+- ✅ GitHub integration
+- ✅ CLI learning commands
 
 ## Troubleshooting
 
@@ -514,6 +697,10 @@ The test suite covers:
 **Bedrock Access**: Verify your AWS credentials and Bedrock permissions in the target region.
 
 **Large PRs**: The tool handles pagination automatically, but very large PRs may take time to process.
+
+**AI Learning**: For large repositories, use module-focused learning with appropriate PR limits to avoid rate limiting.
+
+**Learning Results**: Check output directories for generated standards and analysis results.
 
 **API Authentication**: Check that your `QREVIEWER_API_KEY` is set correctly if using authentication.
 

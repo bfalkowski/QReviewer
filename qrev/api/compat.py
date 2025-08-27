@@ -5,7 +5,7 @@ from typing import Dict, Any, List, Optional
 from ..models import Finding, PRDiff
 from ..github_api import fetch_pr_files
 from ..q_client import review_hunk
-from ..diff import parse_diff_to_hunks
+from ..diff import split_patch_into_hunks
 
 
 async def fetch_pr_diff_async(pr_url: str, token: str = None) -> Dict[str, Any]:
@@ -64,7 +64,7 @@ async def review_hunks_async(diff_json: Dict[str, Any], rules: Optional[Dict[str
             continue
             
         # Parse the patch into hunks
-        hunks = parse_diff_to_hunks(file_data["path"], file_data["patch"])
+        hunks = split_patch_into_hunks(file_data["patch"], file_data["path"])
         
         # Review each hunk
         for hunk in hunks:

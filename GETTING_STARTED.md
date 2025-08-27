@@ -157,6 +157,23 @@ qrev review --inp pr-diff.json \
 ## 🎯 **Step 4: Your First Code Review**
 
 ### **4.1 Review a GitHub PR with Learned Standards**
+
+#### **Option A: Review-Only Mode (Recommended for First-Time Users)**
+```bash
+# Review PR directly without fetching first (generates local report only)
+qrev review-only --pr https://github.com/owner/repo/pull/123 \
+  --standards learned_python,learned_tests \
+  --out my-review.json \
+  --format summary
+
+# Generate HTML report for sharing
+qrev review-only --pr https://github.com/owner/repo/pull/123 \
+  --standards learned_python,learned_tests \
+  --out my-review.json \
+  --format html
+```
+
+#### **Option B: Traditional Two-Step Process**
 ```bash
 # Fetch PR diff from any repository
 qrev fetch --pr https://github.com/owner/repo/pull/123 --out pr-diff.json
@@ -198,6 +215,29 @@ qrev review --inp pr-diff.json --standards security,performance --out findings.j
 
 # List available standards
 qrev standards list
+```
+
+### **4.4 Output Formats for Review-Only Mode**
+
+The `review-only` command supports multiple output formats:
+
+| Format | Command | Output | Use Case |
+|--------|---------|--------|----------|
+| **JSON** | `--format json` | Structured data | Programmatic processing, CI/CD |
+| **HTML** | `--format html` | Web report | Sharing with team, documentation |
+| **Summary** | `--format summary` | Console summary + JSON | Quick review, command line |
+
+**Example with all formats:**
+```bash
+# Generate all formats at once
+qrev review-only --pr https://github.com/owner/repo/pull/123 \
+  --standards learned_python,security \
+  --out my-review \
+  --format html
+
+# This creates:
+# - my-review.html (web report)
+# - my-review.json (structured data)
 ```
 
 ---

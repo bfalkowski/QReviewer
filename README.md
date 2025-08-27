@@ -46,6 +46,7 @@ QReviewer fetches GitHub PR diffs, splits them into reviewable hunks, and uses *
 - 📈 **Continuous Improvement**: Retrain and update standards as repositories evolve
 - ⚙️ **Multi-Backend LLM**: Switch between Amazon Q CLI, AWS Bedrock, and OpenAI
 - 🛡️ **Robust Error Handling**: Graceful degradation and clear error messages
+- 📋 **Review-Only Mode**: Generate local reports without posting to GitHub
 
 ## 🧠 AI Learning System
 
@@ -318,6 +319,25 @@ qrev review --inp pr-diff.json --out findings.json --guidelines guidelines.md
 
 # Control concurrency
 qrev review --inp pr-diff.json --out findings.json --max-concurrency 8
+```
+
+#### 2b. Review-Only Mode (Local Reports)
+
+```bash
+# Review PR directly and generate local report (no GitHub posting)
+qrev review-only --pr https://github.com/org/repo/pull/123 --out review.json
+
+# Review with learned standards and generate HTML report
+qrev review-only --pr https://github.com/org/repo/pull/123 \
+  --standards learned_python,security \
+  --out review \
+  --format html
+
+# Review with guidelines and show summary
+qrev review-only --pr https://github.com/org/repo/pull/123 \
+  --guidelines my-guidelines.md \
+  --out review.json \
+  --format summary
 ```
 
 #### 3. Summarize Findings

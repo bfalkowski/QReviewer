@@ -1,22 +1,40 @@
 # QReviewer
 
-LLM-powered code review tool using Amazon Q via AWS Bedrock.
+LLM-powered code review tool with **Amazon Q CLI as the default backend**, plus support for AWS Bedrock and OpenAI.
+
+## 🚀 **NEW: Amazon Q CLI Integration (Default Backend)**
+
+QReviewer now uses **Amazon Q CLI as the default LLM backend** via SSH to your remote Q machine. This provides:
+
+- **🎯 Superior Code Understanding**: Q's specialized knowledge for code review patterns
+- **🔒 Enhanced Security**: Q's security-focused insights and recommendations  
+- **📱 Easy Setup**: Simple SSH configuration to your Q machine
+- **💪 Fallback Options**: Automatic fallback to Bedrock or OpenAI if needed
+
+### **Why Amazon Q CLI?**
+
+Amazon Q CLI provides:
+- **Repository Context**: Understands your specific codebase and patterns
+- **Security Expertise**: Specialized knowledge for identifying security issues
+- **Multi-language Support**: Excellent coverage across Python, JavaScript, Java, Go, etc.
+- **Team Learning**: Adapts to your team's coding standards over time
 
 ## Overview
 
-QReviewer fetches GitHub PR diffs, splits them into reviewable hunks, and uses Amazon Q to analyze each hunk for code quality issues. It produces structured findings that can be consumed by other tools or agents.
+QReviewer fetches GitHub PR diffs, splits them into reviewable hunks, and uses **Amazon Q CLI** (or your chosen LLM backend) to analyze each hunk for code quality issues. It produces structured findings that can be consumed by other tools or agents.
 
 ## Features
 
 - 🔍 **PR Analysis**: Fetch and parse GitHub PR diffs with pagination support
 - 📝 **Hunk Extraction**: Split unified diffs into logical code hunks
-- 🤖 **AI Review**: Use Amazon Q via Bedrock to review each hunk
+- 🤖 **AI Review**: **Amazon Q CLI as default** with fallback to Bedrock/OpenAI
 - 📊 **Structured Output**: JSON findings with severity, category, and confidence scores
 - 🔒 **Security Heuristics**: Automatic detection of security-related issues
 - 🎯 **WaaP Integration**: Agent wrapper for team.yaml workflows
 - 📋 **Guidelines Support**: Custom project guidelines for consistent reviews
 - 🚀 **REST API**: FastAPI service for integration with other tools and services
 - 📈 **Continuous Improvement**: Retrain and update standards as repositories evolve
+- ⚙️ **Multi-Backend LLM**: Switch between Amazon Q CLI, AWS Bedrock, and OpenAI
 
 ## 🧠 AI Learning System
 
@@ -101,7 +119,9 @@ The system generates:
 
 - Python 3.10+
 - GitHub Personal Access Token
-- AWS credentials configured for Bedrock access
+- **Amazon Q CLI machine** on your network (default)
+- **OR** AWS credentials for Bedrock access (fallback)
+- **OR** OpenAI API key (fallback)
 
 ### Quick Install
 
@@ -119,15 +139,71 @@ pip install -e .
 
 ### Environment Setup
 
+#### **Option 1: Amazon Q CLI (Recommended - Default)**
+
 ```bash
 # Set GitHub token
 export GITHUB_TOKEN=your_github_token_here
 
-# Configure AWS credentials (for Bedrock access)
-aws configure
+# Amazon Q CLI Configuration
+export QREVIEWER_LLM_BACKEND=amazon_q
+export Q_CLI_HOST=192.168.1.100      # IP/hostname of your Q machine
+export Q_CLI_USER=your_username      # SSH username on Q machine
+export Q_CLI_PORT=22                 # SSH port (default: 22)
+export Q_CLI_KEY_PATH=~/.ssh/id_rsa # SSH key path (optional)
 
 # Optional: Set API key for production use
 export QREVIEWER_API_KEY=your_api_key_here
+```
+
+#### **Option 2: AWS Bedrock (Fallback)**
+
+```bash
+# Set GitHub token
+export GITHUB_TOKEN=your_github_token_here
+
+# AWS Bedrock Configuration
+export QREVIEWER_LLM_BACKEND=bedrock
+export AWS_REGION=us-east-1
+export AWS_ACCESS_KEY_ID=your_aws_access_key
+export AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+export MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
+
+# Optional: Set API key for production use
+export QREVIEWER_API_KEY=your_api_key_here
+```
+
+#### **Option 3: OpenAI (Fallback)**
+
+```bash
+# Set GitHub token
+export GITHUB_TOKEN=your_github_token_here
+
+# OpenAI Configuration
+export QREVIEWER_LLM_BACKEND=openai
+export OPENAI_API_KEY=your_openai_api_key
+export OPENAI_MODEL=gpt-4
+
+# Optional: Set API key for production use
+export QREVIEWER_API_KEY=your_api_key_here
+```
+
+### Configuration Management
+
+QReviewer includes a powerful configuration management system:
+
+```bash
+# Show current configuration
+qrev config show
+
+# Validate configuration
+qrev config validate
+
+# Show required environment variables
+qrev config env
+
+# Test LLM connection
+qrev config test
 ```
 
 ## Usage
@@ -147,7 +223,7 @@ python -m qrev.cli fetch --pr https://github.com/org/repo/pull/123 --out pr-diff
 #### 2. Review Code Hunks
 
 ```bash
-# Review with default settings
+# Review with default settings (uses Amazon Q CLI)
 qrev review --inp pr-diff.json --out findings.json
 
 # Review with custom guidelines
@@ -234,13 +310,10 @@ QReviewer now includes a FastAPI service that exposes code review functionality 
 # Install dependencies
 pip install -r requirements.txt
 
-# Set environment variables
+# Set environment variables (see Environment Setup above)
 export GITHUB_TOKEN=your_github_token
-export AWS_REGION=us-east-1
-export MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
-
-# Optional: Set API key for production
-export QREVIEWER_API_KEY=your_api_key
+export Q_CLI_HOST=192.168.1.100
+export Q_CLI_USER=your_username
 
 # Start development server
 make dev
@@ -287,59 +360,10 @@ uvicorn qrev.api.app:app --reload --host 0.0.0.0 --port 8000
 ```bash
 curl -X POST "http://localhost:8000/review" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_api_key" \
   -d '{
     "prUrl": "https://github.com/org/repo/pull/123",
-    "requestId": "review-123"
-  }'
-```
-
-#### Step-by-Step Review
-
-```bash
-# 1. Fetch PR diff
-curl -X POST "http://localhost:8000/fetch_pr" \
-  -H "Content-Type: application/json" \
-  -d '{"prUrl": "https://github.com/org/repo/pull/123"}'
-
-# 2. Review hunks
-curl -X POST "http://localhost:8000/review_hunks" \
-  -H "Content-Type: application/json" \
-  -d '{"diffJson": {...}}'
-
-# 3. Render report
-curl -X POST "http://localhost:8000/render_report" \
-  -H "Content-Type: application/json" \
-  -d '{"findings": [...]}'
-
-# 4. Calculate score
-curl -X POST "http://localhost:8000/score" \
-  -H "Content-Type: application/json" \
-  -d '{"findings": [...]}'
-```
-
-#### AI Learning from Repository
-
-```bash
-# Learn from repository review history
-curl -X POST "http://localhost:8000/learn_from_repository" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_api_key" \
-  -d '{
-    "repositoryUrl": "https://github.com/owner/repo",
-    "maxPRs": 100,
-    "includeComments": true,
-    "includeReviews": true
-  }'
-
-# Post review to GitHub PR
-curl -X POST "http://localhost:8000/post_review" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_api_key" \
-  -d '{
-    "prUrl": "https://github.com/owner/repo/pull/123",
-    "findings": [...],
-    "reviewMessage": "AI-powered code review completed"
+    "guidelines": "Follow PEP 8 style guidelines",
+    "maxConcurrency": 4
   }'
 ```
 
@@ -405,7 +429,8 @@ docker-compose up --build
 # Run standalone container
 docker run -p 8000:8000 \
   -e GITHUB_TOKEN=$GITHUB_TOKEN \
-  -e MODEL_ID=$MODEL_ID \
+  -e Q_CLI_HOST=$Q_CLI_HOST \
+  -e Q_CLI_USER=$Q_CLI_USER \
   -e QREVIEWER_API_KEY=$API_KEY \
   qreviewer-api
 ```
@@ -415,17 +440,26 @@ docker run -p 8000:8000 \
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `GITHUB_TOKEN` | GitHub API access token | - | Yes |
-| `AWS_REGION` | AWS region for Bedrock | `us-east-1` | Yes |
-| `AWS_ACCESS_KEY_ID` | AWS access key | - | Yes* |
-| `AWS_SECRET_ACCESS_KEY` | AWS secret key | - | Yes* |
-| `MODEL_ID` | Bedrock model ID | - | Yes |
+| `QREVIEWER_LLM_BACKEND` | LLM backend to use | `amazon_q` | No |
+| `Q_CLI_HOST` | Hostname/IP of Q machine | - | Yes* |
+| `Q_CLI_USER` | SSH username on Q machine | - | Yes* |
+| `Q_CLI_PORT` | SSH port | `22` | No |
+| `Q_CLI_KEY_PATH` | SSH private key path | Default SSH key | No |
+| `AWS_REGION` | AWS region for Bedrock | `us-east-1` | Yes** |
+| `AWS_ACCESS_KEY_ID` | AWS access key | - | Yes** |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key | - | Yes** |
+| `MODEL_ID` | Bedrock model ID | - | Yes** |
+| `OPENAI_API_KEY` | OpenAI API key | - | Yes*** |
+| `OPENAI_MODEL` | OpenAI model | `gpt-4` | No |
 | `QREVIEWER_API_KEY` | API key for authentication | - | No |
 | `FETCH_TIMEOUT_SEC` | GitHub API timeout | `30` | No |
 | `REVIEW_TIMEOUT_SEC` | LLM review timeout | `120` | No |
 | `MAX_FILES` | Maximum files to process | `200` | No |
 | `MAX_PATCH_BYTES` | Maximum patch size | `1,000,000` | No |
 
-*Can use IAM instance role instead
+*Required for Amazon Q CLI backend
+**Required for AWS Bedrock backend  
+***Required for OpenAI backend
 
 ## Output Formats
 
@@ -480,27 +514,62 @@ docker run -p 8000:8000 \
 
 Set the `GITHUB_TOKEN` environment variable with a Personal Access Token that has access to the repositories you want to review.
 
-### AWS Bedrock Integration
+### **Amazon Q CLI Integration (Default)**
 
-The current implementation includes a stub for Amazon Q integration. To wire up the real Bedrock client:
+QReviewer is now configured to use **Amazon Q CLI as the default backend**:
+
+1. **Install Amazon Q CLI** on a machine in your network
+2. **Configure SSH access** to that machine
+3. **Set environment variables**:
+   ```bash
+   export Q_CLI_HOST=192.168.1.100
+   export Q_CLI_USER=your_username
+   export Q_CLI_PORT=22
+   export Q_CLI_KEY_PATH=~/.ssh/id_rsa  # Optional
+   ```
+
+4. **Test the connection**:
+   ```bash
+   qrev config test
+   ```
+
+### **AWS Bedrock Integration (Fallback)**
+
+To use AWS Bedrock as a fallback:
 
 1. **Install boto3**:
    ```bash
    pip install boto3
    ```
 
-2. **Update `qrev/q_client.py`**:
-   - Replace the stub implementation in `review_hunk()`
-   - Use the provided example code as a starting point
-   - Configure your preferred Amazon Q model
+2. **Set environment variables**:
+   ```bash
+   export QREVIEWER_LLM_BACKEND=bedrock
+   export AWS_REGION=us-east-1
+   export AWS_ACCESS_KEY_ID=your_key
+   export AWS_SECRET_ACCESS_KEY=your_secret
+   export MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
+   ```
 
 3. **Configure AWS credentials**:
    ```bash
    aws configure
-   # Or set environment variables:
-   export AWS_ACCESS_KEY_ID=your_key
-   export AWS_SECRET_ACCESS_KEY=your_secret
-   export AWS_DEFAULT_REGION=us-east-1
+   ```
+
+### **OpenAI Integration (Fallback)**
+
+To use OpenAI as a fallback:
+
+1. **Install openai**:
+   ```bash
+   pip install openai
+   ```
+
+2. **Set environment variables**:
+   ```bash
+   export QREVIEWER_LLM_BACKEND=openai
+   export OPENAI_API_KEY=your_api_key
+   export OPENAI_MODEL=gpt-4
    ```
 
 ### Project Guidelines
@@ -524,224 +593,155 @@ Create a `guidelines.md` file with your project's coding standards:
 ```
 QReviewer/
 ├── qrev/                    # Core package
-│   ├── __init__.py
-│   ├── cli.py              # Typer CLI commands
-│   ├── models.py            # Pydantic data models
-│   ├── github_api.py        # GitHub API client
-│   ├── diff.py              # Diff parsing utilities
-│   ├── prompts.py           # LLM prompt builders
-│   ├── q_client.py          # Amazon Q client (stub)
-│   ├── report.py            # HTML report generation
-│   └── api/                 # FastAPI service
-│       ├── __init__.py
-│       ├── app.py           # FastAPI application
-│       ├── models.py        # API request/response models
-│       ├── security.py      # Authentication middleware
-│       ├── utils.py         # Utility functions
-│       └── compat.py        # Compatibility layer
-├── waap/                    # WaaP utilities
-│   ├── __init__.py
-│   └── blackboard.py        # Context management
-├── agents/                  # Agent wrappers
-│   ├── __init__.py
-│   └── qreviewer.py         # Main WaaP agent
-├── tests/                   # Test suite
-│   ├── __init__.py
-│   └── test_api.py          # API endpoint tests
-├── results/                 # Output directory (auto-created)
-├── example-guidelines.md    # Sample guidelines
-├── example-context.json     # Sample context
-├── pyproject.toml           # Project configuration
-├── requirements.txt         # Dependencies
-├── Dockerfile               # Docker image
-├── docker-compose.yml       # Docker Compose
-├── Makefile                 # Development commands
-├── pytest.ini              # Test configuration
+│   ├── api/                # FastAPI service
+│   ├── cli.py              # Main CLI interface
+│   ├── cli_config.py       # Configuration management CLI
+│   ├── cli_learning.py     # AI learning CLI
+│   ├── config.py           # Configuration management
+│   ├── llm_client.py       # Multi-backend LLM client
+│   ├── github_api.py       # GitHub API integration
+│   ├── diff.py             # Diff parsing and hunk extraction
+│   ├── models.py           # Data models
+│   ├── prompts.py          # LLM prompts
+│   ├── report.py           # HTML report generation
+│   ├── standards.py        # Review standards management
+│   ├── learning.py         # AI learning system
+│   └── github_review.py    # GitHub PR review posting
+├── learning_results/        # AI learning outputs (organized by repo)
+├── tests/                  # Test files and demos
+├── standards/              # Default review standards
+├── config.env.example      # Configuration template
+├── requirements.txt        # Python dependencies
+├── Dockerfile              # Docker container
+├── docker-compose.yml      # Docker Compose setup
+├── Makefile                # Development commands
 └── README.md               # This file
 ```
 
-## Development
+## **Amazon Q CLI Setup Guide**
 
-### Setup Development Environment
+### **Step 1: Install Amazon Q CLI**
+
+On your Q machine:
+```bash
+# Follow Amazon's official installation guide
+# https://docs.aws.amazon.com/q/latest/developer-guide/cli.html
+```
+
+### **Step 2: Configure SSH Access**
+
+From your development machine:
+```bash
+# Test SSH connection
+ssh your_username@192.168.1.100
+
+# Test Q CLI access
+ssh your_username@192.168.1.100 "q --version"
+```
+
+### **Step 3: Configure QReviewer**
 
 ```bash
-# Install development dependencies
-pip install -e ".[dev]"
+# Set environment variables
+export Q_CLI_HOST=192.168.1.100
+export Q_CLI_USER=your_username
+export GITHUB_TOKEN=your_github_token
 
-# Run tests
-make test
-# or
-pytest
-
-# Format code
-black .
-isort .
-
-# Type checking
-mypy .
-
-# Linting
-flake8
+# Test configuration
+qrev config test
 ```
 
-### Development Commands
+### **Step 4: Verify Integration**
 
 ```bash
-# Show available commands
-make help
-
-# Install dependencies
-make install
-
-# Run development server
-make dev
-
-# Run tests
-make test
-
-# Build Docker image
-make docker-build
-
-# Run with Docker Compose
-make docker-run
-
-# Stop Docker services
-make docker-stop
-
-# Clean up generated files
-make clean
-
-# Test API endpoints
-make test-api
+# Test with a simple review
+qrev review --inp test-diff.json --out test-findings.json
 ```
 
-### Adding New Features
+## **Benefits of Amazon Q CLI Integration**
 
-1. **Models**: Extend `qrev/models.py` for new data structures
-2. **API**: Add new endpoints in `qrev/api/app.py`
-3. **Prompts**: Customize prompts in `qrev/prompts.py`
-4. **CLI**: Add new commands in `qrev/cli.py`
+1. **🎯 Superior Code Understanding**: Q understands your codebase context
+2. **🔒 Enhanced Security**: Specialized security knowledge and patterns
+3. **📱 Easy Setup**: Simple SSH configuration, no API keys needed
+4. **💪 Reliable**: Runs on your infrastructure, no external dependencies
+5. **🔄 Learning**: Q improves over time with your team's patterns
+6. **💰 Cost Effective**: No per-token charges, just your infrastructure costs
 
-### New AI Learning Modules
+## **Fallback Strategy**
 
-1. **`qrev/learning.py`** - Repository analysis and pattern extraction
-2. **`qrev/cli_learning.py`** - CLI for module-focused learning
-3. **`qrev/standards.py`** - Review standards and context management
-4. **`qrev/github_review.py`** - GitHub PR review and commenting
+QReviewer automatically handles fallbacks:
 
-### Architecture Overview
+1. **Primary**: Amazon Q CLI (if configured)
+2. **Fallback 1**: AWS Bedrock (if configured)
+3. **Fallback 2**: OpenAI (if configured)
+4. **Last Resort**: Stub implementation with warnings
 
-```
-QReviewer
-├── Core Review Engine
-│   ├── PR fetching and parsing
-│   ├── Hunk extraction and analysis
-│   └── LLM integration (Amazon Q)
-├── AI Learning System
-│   ├── Repository analysis
-│   ├── Pattern extraction
-│   ├── Standards generation
-│   └── Module-focused learning
-├── Standards Management
-│   ├── Context-aware rules
-│   ├── Team preferences
-│   └── Custom guidelines
-└── GitHub Integration
-    ├── Review posting
-    ├── Inline comments
-    └── PR management
-```
+This ensures your code reviews continue working even if one backend is unavailable.
 
-## Testing
+## **Troubleshooting**
 
-### Running Tests
+### **Amazon Q CLI Issues**
 
 ```bash
-# Run all tests
-pytest
+# Test SSH connection
+ssh -v your_username@192.168.1.100
 
-# Run with coverage
-pytest --cov=qrev
+# Test Q CLI directly
+ssh your_username@192.168.1.100 "q chat --prompt 'Hello'"
 
-# Run specific test file
-pytest tests/test_api.py
-
-# Run specific test class
-pytest tests/test_api.py::TestReviewEndpoint
-
-# Run specific test method
-pytest tests/test_api.py::TestReviewEndpoint::test_review_endpoint_success
+# Check configuration
+qrev config show
+qrev config validate
 ```
 
-### Test Coverage
+### **Common Issues**
 
-The test suite covers:
-- ✅ API endpoint functionality
-- ✅ Request/response validation
-- ✅ Error handling
-- ✅ Security middleware
-- ✅ HTML report generation
-- ✅ Utility functions
-- ✅ AI learning system
-- ✅ Module-focused learning
-- ✅ Standards management
-- ✅ GitHub integration
-- ✅ CLI learning commands
+1. **SSH Connection Failed**: Check network, firewall, SSH configuration
+2. **Q CLI Not Found**: Verify Q CLI installation on remote machine
+3. **Permission Denied**: Check SSH key permissions and user access
+4. **Timeout Errors**: Increase `REVIEW_TIMEOUT_SEC` environment variable
 
-## Troubleshooting
-
-### Common Issues
-
-**GitHub API Rate Limits**: Ensure your token has appropriate permissions and consider using a GitHub App for higher limits.
-
-**Bedrock Access**: Verify your AWS credentials and Bedrock permissions in the target region.
-
-**Large PRs**: The tool handles pagination automatically, but very large PRs may take time to process.
-
-**AI Learning**: For large repositories, use module-focused learning with appropriate PR limits to avoid rate limiting.
-
-**Learning Results**: Check output directories for generated standards and analysis results.
-
-**API Authentication**: Check that your `QREVIEWER_API_KEY` is set correctly if using authentication.
-
-### Debug Mode
-
-Enable verbose logging:
+### **Performance Tuning**
 
 ```bash
-export PYTHONPATH=.
-python -m qrev.cli fetch --pr https://github.com/org/repo/pull/123 --out debug.json
+# Increase timeouts for large PRs
+export REVIEW_TIMEOUT_SEC=300
+export FETCH_TIMEOUT_SEC=60
+
+# Adjust concurrency
+qrev review --inp pr-diff.json --max-concurrency 2
 ```
 
-### API Debugging
+## **Migration from Previous Versions**
 
-```bash
-# Check API health
-curl http://localhost:8000/health
+If you're upgrading from a previous version:
 
-# View API documentation
-open http://localhost:8000/docs
+1. **Backup your configuration**:
+   ```bash
+   cp .env .env.backup
+   ```
 
-# Test endpoints with verbose output
-curl -v -X POST "http://localhost:8000/review" \
-  -H "Content-Type: application/json" \
-  -d '{"prUrl": "https://github.com/org/repo/pull/123"}'
-```
+2. **Update environment variables**:
+   ```bash
+   # Old: AWS Bedrock only
+   export MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
+   
+   # New: Amazon Q CLI (default)
+   export Q_CLI_HOST=your_q_machine_ip
+   export Q_CLI_USER=your_username
+   ```
 
-## Contributing
+3. **Test the new configuration**:
+   ```bash
+   qrev config test
+   ```
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+4. **Run a test review** to ensure everything works
 
-## License
+## **Contributing**
 
-MIT License - see LICENSE file for details.
+We welcome contributions! Please see our contributing guidelines for details.
 
-## Support
+## **License**
 
-- **Issues**: [GitHub Issues](https://github.com/org/qreviewer/issues)
-- **Documentation**: [Wiki](https://github.com/org/qreviewer/wiki)
-- **Discussions**: [GitHub Discussions](https://github.com/org/qreviewer/discussions)
+This project is licensed under the MIT License - see the LICENSE file for details.

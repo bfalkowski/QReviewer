@@ -11,11 +11,14 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .github_api import fetch_pr_files, GitHubAPIError
 from .diff import extract_hunks_from_files
-from .q_client import review_hunk, apply_security_heuristics
+from .llm_client import review_hunk, apply_security_heuristics
 from .models import PRDiff, FindingsReport, ReviewStats
 
 app = typer.Typer(help="LLM-powered code review tool")
 console = Console()
+
+# Import config commands
+from .cli_config import show, validate, env, test
 
 
 @app.command()
@@ -202,6 +205,18 @@ def summarize(
     except Exception as e:
         console.print(f"❌ Unexpected error: {e}")
         raise typer.Exit(1)
+
+
+@app.command()
+def config():
+    """Configuration management for QReviewer."""
+    pass
+
+# Add config subcommands
+config.add_command(show, name="show")
+config.add_command(validate, name="validate")
+config.add_command(env, name="env")
+config.add_command(test, name="test")
 
 
 def main():

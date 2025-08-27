@@ -4,8 +4,9 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from ..models import Finding, PRDiff
 from ..github_api import fetch_pr_files
-from ..q_client import review_hunk
+from ..llm_client import get_llm_client
 from ..diff import split_patch_into_hunks
+import json
 
 
 async def fetch_pr_diff_async(pr_url: str, token: str = None) -> Dict[str, Any]:
@@ -51,7 +52,7 @@ async def review_hunks_async(diff_json: Dict[str, Any], rules: Optional[Dict[str
     Args:
         diff_json: PR diff data from GitHub
         rules: Optional review rules
-        model_id: Optional model ID for LLM
+        model_id: Optional model ID for LLM (ignored, uses config)
         
     Returns:
         List of Finding objects
@@ -85,5 +86,16 @@ async def review_hunk_async(hunk, rules: Optional[Dict[str, Any]] = None) -> Lis
     Returns:
         List of Finding objects
     """
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, review_hunk, hunk, rules)
+    # Get the configured LLM client
+    llm_client = get_llm_client()
+    
+    # Convert rules to guidelines string if provided
+    guidelines = None
+    if rules:
+        if isinstance(rules, dict):
+            guidelines = json.dumps(rules, indent=2)
+        else:
+            guidelines = str(rules)
+    
+    # Review the hunk using the configured LLM backend
+    return await llm_client.review_hunk(hunk, guidelines)

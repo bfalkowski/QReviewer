@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  qreviewer-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MODEL_ID=${MODEL_ID:-anthropic.claude-3-5-sonnet-20241022-v2:0}
+      - QREVIEWER_API_KEY=${QREVIEWER_API_KEY}
+      - FETCH_TIMEOUT_SEC=${FETCH_TIMEOUT_SEC:-30}
+      - REVIEW_TIMEOUT_SEC=${REVIEW_TIMEOUT_SEC:-120}
+      - MAX_FILES=${MAX_FILES:-200}
+      - MAX_PATCH_BYTES=${MAX_PATCH_BYTES:-1000000}
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

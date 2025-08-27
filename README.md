@@ -2,6 +2,8 @@
 
 LLM-powered code review tool with **Amazon Q CLI as the default backend**, plus support for AWS Bedrock and OpenAI.
 
+> **🚀 New to QReviewer?** Start with our [**Getting Started Guide**](GETTING_STARTED.md) for step-by-step setup instructions!
+
 ## 🚀 **NEW: Amazon Q CLI Integration (Default Backend)**
 
 QReviewer now uses **Amazon Q CLI as the default LLM backend** via SSH to your remote Q machine. This provides:

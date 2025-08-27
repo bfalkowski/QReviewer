@@ -143,6 +143,17 @@ pr-diff.json
 findings.json
 *.log
 
+# Learning results (can be large and repository-specific)
+learning_results/*/
+!learning_results/README.md
+
+# Test outputs and temporary files
+tests/*.json
+tests/*/
+!tests/README.md
+!tests/test_*.py
+!tests/demo_*.py
+
 # IDE
 .vscode/
 .idea/

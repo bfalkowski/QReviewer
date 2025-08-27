@@ -15,6 +15,7 @@ QReviewer fetches GitHub PR diffs, splits them into reviewable hunks, and uses A
 - 🔒 **Security Heuristics**: Automatic detection of security-related issues
 - 🎯 **WaaP Integration**: Agent wrapper for team.yaml workflows
 - 📋 **Guidelines Support**: Custom project guidelines for consistent reviews
+- 🚀 **REST API**: FastAPI service for integration with other tools and services
 
 ## Installation
 
@@ -28,7 +29,7 @@ QReviewer fetches GitHub PR diffs, splits them into reviewable hunks, and uses A
 
 ```bash
 # Install dependencies
-pip install typer[all] pydantic requests rich
+pip install -r requirements.txt
 
 # Clone the repository
 git clone https://github.com/org/qreviewer.git
@@ -46,6 +47,9 @@ export GITHUB_TOKEN=your_github_token_here
 
 # Configure AWS credentials (for Bedrock access)
 aws configure
+
+# Optional: Set API key for production use
+export QREVIEWER_API_KEY=your_api_key_here
 ```
 
 ## Usage
@@ -108,6 +112,172 @@ The agent will:
 - Fetch and review the PR
 - Write results to `results/review.findings.json`
 - Update `context.json` with review metadata
+
+## API Server Mode
+
+QReviewer now includes a FastAPI service that exposes code review functionality through REST endpoints, making it easy to integrate with CI/CD pipelines, web applications, and other services.
+
+### Quick Start
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Set environment variables
+export GITHUB_TOKEN=your_github_token
+export AWS_REGION=us-east-1
+export MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
+
+# Optional: Set API key for production
+export QREVIEWER_API_KEY=your_api_key
+
+# Start development server
+make dev
+# or
+uvicorn qrev.api.app:app --reload --host 0.0.0.0 --port 8000
+```
+
+### API Endpoints
+
+#### Main Endpoint
+
+- **`POST /review`** - Complete PR review pipeline (fetch → review → render → score)
+
+#### Composition Endpoints
+
+- **`POST /fetch_pr`** - Fetch PR diff from GitHub
+- **`POST /review_hunks`** - Review code changes using LLM
+- **`POST /render_report`** - Generate HTML report from findings
+- **`POST /score`** - Calculate review score from findings
+
+#### Utility Endpoints
+
+- **`GET /`** - API information and documentation links
+- **`GET /health`** - Health check endpoint
+- **`GET /docs`** - Interactive API documentation (Swagger UI)
+- **`GET /redoc`** - ReDoc documentation
+
+### Example API Usage
+
+#### Complete Review
+
+```bash
+curl -X POST "http://localhost:8000/review" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_api_key" \
+  -d '{
+    "prUrl": "https://github.com/org/repo/pull/123",
+    "requestId": "review-123"
+  }'
+```
+
+#### Step-by-Step Review
+
+```bash
+# 1. Fetch PR diff
+curl -X POST "http://localhost:8000/fetch_pr" \
+  -H "Content-Type: application/json" \
+  -d '{"prUrl": "https://github.com/org/repo/pull/123"}'
+
+# 2. Review hunks
+curl -X POST "http://localhost:8000/review_hunks" \
+  -H "Content-Type: application/json" \
+  -d '{"diffJson": {...}}'
+
+# 3. Render report
+curl -X POST "http://localhost:8000/render_report" \
+  -H "Content-Type: application/json" \
+  -d '{"findings": [...]}'
+
+# 4. Calculate score
+curl -X POST "http://localhost:8000/score" \
+  -H "Content-Type: application/json" \
+  -d '{"findings": [...]}'
+```
+
+### API Response Format
+
+#### Review Response
+
+```json
+{
+  "score": 2.5,
+  "findings": [
+    {
+      "file": "src/example.py",
+      "hunk_header": "@@ -10,6 +10,8 @@",
+      "severity": "major",
+      "category": "security",
+      "message": "Escape untrusted HTML before rendering.",
+      "confidence": 0.86,
+      "suggested_patch": "```suggestion\nreturn sanitize(html)\n```",
+      "line_hint": 18
+    }
+  ],
+  "reportHtml": "<!DOCTYPE html>...",
+  "reportHash": "sha256:abc123...",
+  "stepDurations": {
+    "fetch_pr_ms": 1500,
+    "review_ms": 8000,
+    "render_ms": 200,
+    "score_ms": 50
+  }
+}
+```
+
+### Authentication
+
+The API supports optional Bearer token authentication:
+
+- **Development Mode**: No authentication required when `QREVIEWER_API_KEY` is not set
+- **Production Mode**: Set `QREVIEWER_API_KEY` environment variable to require valid Bearer tokens
+
+```bash
+# Set API key
+export QREVIEWER_API_KEY=your_secret_key
+
+# Use in requests
+curl -H "Authorization: Bearer your_secret_key" \
+  http://localhost:8000/review
+```
+
+### Docker Deployment
+
+```bash
+# Build image
+make docker-build
+# or
+docker build -t qreviewer-api .
+
+# Run with Docker Compose
+make docker-run
+# or
+docker-compose up --build
+
+# Run standalone container
+docker run -p 8000:8000 \
+  -e GITHUB_TOKEN=$GITHUB_TOKEN \
+  -e MODEL_ID=$MODEL_ID \
+  -e QREVIEWER_API_KEY=$API_KEY \
+  qreviewer-api
+```
+
+### Environment Variables
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `GITHUB_TOKEN` | GitHub API access token | - | Yes |
+| `AWS_REGION` | AWS region for Bedrock | `us-east-1` | Yes |
+| `AWS_ACCESS_KEY_ID` | AWS access key | - | Yes* |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key | - | Yes* |
+| `MODEL_ID` | Bedrock model ID | - | Yes |
+| `QREVIEWER_API_KEY` | API key for authentication | - | No |
+| `FETCH_TIMEOUT_SEC` | GitHub API timeout | `30` | No |
+| `REVIEW_TIMEOUT_SEC` | LLM review timeout | `120` | No |
+| `MAX_FILES` | Maximum files to process | `200` | No |
+| `MAX_PATCH_BYTES` | Maximum patch size | `1,000,000` | No |
+
+*Can use IAM instance role instead
 
 ## Output Formats
 
@@ -212,18 +382,33 @@ QReviewer/
 │   ├── github_api.py        # GitHub API client
 │   ├── diff.py              # Diff parsing utilities
 │   ├── prompts.py           # LLM prompt builders
-│   └── q_client.py          # Amazon Q client (stub)
+│   ├── q_client.py          # Amazon Q client (stub)
+│   ├── report.py            # HTML report generation
+│   └── api/                 # FastAPI service
+│       ├── __init__.py
+│       ├── app.py           # FastAPI application
+│       ├── models.py        # API request/response models
+│       ├── security.py      # Authentication middleware
+│       ├── utils.py         # Utility functions
+│       └── compat.py        # Compatibility layer
 ├── waap/                    # WaaP utilities
 │   ├── __init__.py
 │   └── blackboard.py        # Context management
 ├── agents/                  # Agent wrappers
 │   ├── __init__.py
 │   └── qreviewer.py         # Main WaaP agent
+├── tests/                   # Test suite
+│   ├── __init__.py
+│   └── test_api.py          # API endpoint tests
 ├── results/                 # Output directory (auto-created)
 ├── example-guidelines.md    # Sample guidelines
 ├── example-context.json     # Sample context
 ├── pyproject.toml           # Project configuration
 ├── requirements.txt         # Dependencies
+├── Dockerfile               # Docker image
+├── docker-compose.yml       # Docker Compose
+├── Makefile                 # Development commands
+├── pytest.ini              # Test configuration
 └── README.md               # This file
 ```
 
@@ -236,6 +421,8 @@ QReviewer/
 pip install -e ".[dev]"
 
 # Run tests
+make test
+# or
 pytest
 
 # Format code
@@ -249,12 +436,74 @@ mypy .
 flake8
 ```
 
+### Development Commands
+
+```bash
+# Show available commands
+make help
+
+# Install dependencies
+make install
+
+# Run development server
+make dev
+
+# Run tests
+make test
+
+# Build Docker image
+make docker-build
+
+# Run with Docker Compose
+make docker-run
+
+# Stop Docker services
+make docker-stop
+
+# Clean up generated files
+make clean
+
+# Test API endpoints
+make test-api
+```
+
 ### Adding New Features
 
 1. **Models**: Extend `qrev/models.py` for new data structures
-2. **API**: Add new endpoints in `qrev/github_api.py`
+2. **API**: Add new endpoints in `qrev/api/app.py`
 3. **Prompts**: Customize prompts in `qrev/prompts.py`
 4. **CLI**: Add new commands in `qrev/cli.py`
+
+## Testing
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=qrev
+
+# Run specific test file
+pytest tests/test_api.py
+
+# Run specific test class
+pytest tests/test_api.py::TestReviewEndpoint
+
+# Run specific test method
+pytest tests/test_api.py::TestReviewEndpoint::test_review_endpoint_success
+```
+
+### Test Coverage
+
+The test suite covers:
+- ✅ API endpoint functionality
+- ✅ Request/response validation
+- ✅ Error handling
+- ✅ Security middleware
+- ✅ HTML report generation
+- ✅ Utility functions
 
 ## Troubleshooting
 
@@ -266,6 +515,8 @@ flake8
 
 **Large PRs**: The tool handles pagination automatically, but very large PRs may take time to process.
 
+**API Authentication**: Check that your `QREVIEWER_API_KEY` is set correctly if using authentication.
+
 ### Debug Mode
 
 Enable verbose logging:
@@ -273,6 +524,21 @@ Enable verbose logging:
 ```bash
 export PYTHONPATH=.
 python -m qrev.cli fetch --pr https://github.com/org/repo/pull/123 --out debug.json
+```
+
+### API Debugging
+
+```bash
+# Check API health
+curl http://localhost:8000/health
+
+# View API documentation
+open http://localhost:8000/docs
+
+# Test endpoints with verbose output
+curl -v -X POST "http://localhost:8000/review" \
+  -H "Content-Type: application/json" \
+  -d '{"prUrl": "https://github.com/org/repo/pull/123"}'
 ```
 
 ## Contributing

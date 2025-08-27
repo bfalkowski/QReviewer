@@ -122,7 +122,7 @@ API Key: ❌ Not required
 ### **3.1 Initial Training**
 ```bash
 # Train on your own repository
-qrev learn https://github.com/yourusername/yourrepo \
+python -m qrev.cli_learning learn https://github.com/yourusername/yourrepo \
   --module src \
   --module tests \
   --max-prs-per-module 50 \
@@ -247,7 +247,7 @@ qrev review-only --pr https://github.com/owner/repo/pull/123 \
 ### **5.1 Retrain Periodically**
 ```bash
 # Retrain on recent changes
-qrev learn https://github.com/yourusername/yourrepo \
+python -m qrev.cli_learning learn https://github.com/yourusername/yourrepo \
   --module src \
   --strategy recent \
   --max-prs-per-module 25 \
@@ -292,7 +292,7 @@ curl -X POST "http://localhost:8000/review_hunks" \
 ### **6.2 Module-Focused Learning**
 ```bash
 # Focus on specific parts of your codebase
-qrev learn https://github.com/yourusername/yourrepo \
+python -m qrev.cli_learning learn https://github.com/yourusername/yourrepo \
   --module src/api \
   --module src/core \
   --module tests/unit \

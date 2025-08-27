@@ -351,16 +351,16 @@ qrev summarize --inp findings.json
 
 ```bash
 # Learn from specific modules in a repository
-qrev learn https://github.com/owner/repo \
+python -m qrev.cli_learning learn https://github.com/owner/repo \
   --module src/api \
   --module lib/core \
   --max-prs-per-module 50
 
 # List available learning strategies
-qrev list-strategies
+python -m qrev.cli_learning list-strategies
 
 # Learn with custom parameters
-qrev learn https://github.com/owner/repo \
+python -m qrev.cli_learning learn https://github.com/owner/repo \
   --module src \
   --strategy high_impact \
   --max-total-prs 200 \
